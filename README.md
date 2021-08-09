@@ -11,7 +11,7 @@ A simple adblock dns server. Simplified version of [https://vlads.me/post/settin
 
 * wget and diff to compare files if required
 
-	```Console
+	```console
 	root@host:/ # pkg install wget diffutils
 	```
 
