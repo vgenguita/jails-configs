@@ -21,12 +21,12 @@ else
     cp $CONFIGS/dnsmasq_rcd $JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq
     cp $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
     # grab some configs
-    wget --no-check-certificate https://raw.githubusercontent.com/acidwars/AdBlock-Lists/master/adblock.conf -O /usr/local/etc/dnsmasq.conf.d/20-adblock.conf
-    wget --no-check-certificate https://raw.githubusercontent.com/acidwars/AdBlock-Lists/master/ads01.conf -O /usr/local/etc/dnsmasq.conf.d/21-ads01.conf
-    wget --no-check-certificate https://raw.githubusercontent.com/notracking/hosts-blocklists/master/domains.txt -O /usr/local/etc/dnsmasq.conf.d/22-blocklists.conf
+    wget --no-check-certificate https://raw.githubusercontent.com/acidwars/AdBlock-Lists/master/adblock.conf -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/20-adblock.conf
+    wget --no-check-certificate https://raw.githubusercontent.com/acidwars/AdBlock-Lists/master/ads01.conf -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/21-ads01.conf
+    wget --no-check-certificate https://raw.githubusercontent.com/notracking/hosts-blocklists/master/domains.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/22-blocklists.conf
     # grab some hosts
-    wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt -O /usr/local/etc/hosts.d/adguard
-    wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardMobileAds.txt -O /usr/local/etc/hosts.d/adguard-mobile
+    wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/hosts.d/adguard
+    wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardMobileAds.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/hosts.d/adguard-mobile
     ##POST
     ##Pass port from jail to host with pf or prefered firewall
     ##Test config
@@ -36,4 +36,6 @@ else
     ##  drill freebsd.org @ipjail #ON HOST
     ##Start service
     ##  service dnsmasq start
+    echo "dnsmasq_enable=\"YES\"" >> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
+    echo "dnsmasq_conf=\"/usr/local/etc/dnsmasq.conf\"">> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
 endif

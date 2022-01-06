@@ -21,7 +21,13 @@ A simple adblock dns server. Simplified version of [https://vlads.me/post/settin
 	```Shell
 	set JAILMOUNTPOINT = "/mnt/jails"
 	```
+* Uncoment this lines if you want to check config files difference before to copy them
 
+
+	```Shell
+	##diff $CONFIGS/dnsmasq_rcd $JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq
+	##diff $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
+	```
 
 ### **INSTALL**
 
@@ -43,7 +49,7 @@ rdr on $ext_if proto udp from any to any port $dns-> $jail_ip
 Check config on jail
 
 ```console
-user@host:/ #  jexec jail
+user@host:/ # jexec jail
 user@jail:/ # dnsmasq --test
 dnsmasq: syntax check OK.
 ```
