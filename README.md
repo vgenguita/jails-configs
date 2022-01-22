@@ -11,9 +11,8 @@ A simple adblock dns server. Simplified version of [https://vlads.me/post/settin
 
 * wget and diff to compare files if required
 
-	```console
-	root@host:/ # pkg install wget diffutils
-	```
+	`root@host:/ # pkg install wget diffutils
+	`
 
 * An empty or existing jail
 	*  	Set jail mount point with JAILMOUNTPOINT variable of dnsmasq_jail.sh script. I don' t know if it would be better to pass mountpoint as an script input arg
