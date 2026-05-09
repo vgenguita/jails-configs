@@ -1,42 +1,61 @@
-#!/bin/csh
-if ($#argv != 1) then
-	echo "Use: $0 jailName"
-	exit 0
-else
-    ##PRE
-    ##pkg install diffutils wget
-    set JAIL = "$1"
-    set JAILMOUNTPOINT = "/mnt/jails"
-    set CONFIGS = "config"
-    service jail restart $JAIL
-    pkg -j $JAIL install dnsmasq
-    echo dnsmasq_enable="YES" >> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
-    # create required directories
-    # mkdir /usr/local/etc/{dnsmasq.conf,hosts}.d
-    # create a new file for hosts & addresses
-    #cp $CONFIGS/10-custom.conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf.d/
-    ##Check with diff before copy
-    ##diff $CONFIGS/dnsmasq_rcd $JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq
-    ##diff $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
-    cp $CONFIGS/dnsmasq_rcd $JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq
-    cp $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
-    # grab some configs
-    #wget --no-check-certificate https://raw.githubusercontent.com/acidwars/AdBlock-Lists/master/adblock.conf -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/20-adblock.conf
-    #wget --no-check-certificate https://raw.githubusercontent.com/acidwars/AdBlock-Lists/master/ads01.conf -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/21-ads01.conf
-    #wget --no-check-certificate https://raw.githubusercontent.com/notracking/hosts-blocklists/master/domains.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/22-blocklists.conf
-    wget --no-check-certificate https://raw.githubusercontent.com/scottmuc/dns-zone-blocklist/master/dnsmasq/dnsmasq.blocklist -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/23-dns-zone-blocklist.conf
-    # grab some hosts
-    #wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/hosts.d/adguard
-    #wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardMobileAds.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/hosts.d/adguard-mobile
-    ##POST
-    ##Pass port from jail to host with pf or prefered firewall
-    ##Test config
-    ##  dnsmasq --test #ON JAIL
-    ##Check config
-    ##  dnsmasq -d -q #ON JAIL
-    ##  drill freebsd.org @ipjail #ON HOST
-    ##Start service
-    ##  service dnsmasq start
-    echo "dnsmasq_enable=\"YES\"" >> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
-    echo "dnsmasq_conf=\"/usr/local/etc/dnsmasq.conf\"">> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
-endif
+#!/bin/sh
+
+# DNSMasq Jail Setup Script for FreeBSD/TrueNAS
+# Modified to include multiple Hagezi blocklists
+
+# Configuration
+jailName="dnsmasq"
+dnsmasqConfDir="/usr/local/etc/dnsmasq.d"
+blockListFile="$dnsmasqConfDir/blocklist.conf"
+
+# Blocklist URLs
+blockListFakeUrl='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt'
+blockListPopUpUrl='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt'
+blockListAntiPiracy='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/anti.piracy.txt'
+blockListGambling='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/gambling.txt'
+blockListTrackingApple='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt'
+blockListTrackingMicrosoft='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.winoffice.txt'
+blockListTrackingTikTok='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.tiktok.txt'
+blockListTrackingLgWebOS='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.lgwebos.txt'
+blockListTrackingOppoRealme='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.oppo-realme.txt'
+blockListTrackingXiaomi='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.xiaomi.txt'
+blockListTrackingAmazon='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt'
+
+echo "Installing dnsmasq..."
+pkg install -y dnsmasq
+
+echo "Creating configuration directory..."
+mkdir -p $dnsmasqConfDir
+
+echo "Downloading and updating blocklists..."
+# Create/Empty the blocklist file
+: > "$blockListFile"
+
+# Download each list and append to the main blocklist file
+for url in "$blockListFakeUrl" "$blockListPopUpUrl" "$blockListAntiPiracy" "$blockListGambling" \
+           "$blockListTrackingApple" "$blockListTrackingMicrosoft" "$blockListTrackingTikTok" \
+           "$blockListTrackingLgWebOS" "$blockListTrackingOppoRealme" "$blockListTrackingXiaomi" \
+           "$blockListTrackingAmazon"; do
+    echo "Fetching $url..."
+    fetch -o - "$url" >> "$blockListFile"
+done
+
+# Basic dnsmasq configuration
+cat <<EOF > /usr/local/etc/dnsmasq.conf
+# Main configuration
+conf-dir=$dnsmasqConfDir/,.conf
+port=53
+domain-needed
+bogus-priv
+no-resolv
+server=1.1.1.1
+server=1.0.0.1
+interface=epair0b
+bind-interfaces
+EOF
+
+echo "Enabling and starting dnsmasq..."
+sysrc dnsmasq_enable="YES"
+service dnsmasq restart
+
+echo "Setup complete. DNSMasq is running with the updated blocklists."
