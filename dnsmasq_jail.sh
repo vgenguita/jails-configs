@@ -29,7 +29,7 @@ else
     ##diff $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
     cp "$CONFIGS/dnsmasq_rcd" "$JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq"
     cp "$CONFIGS/dnsmasq_conf" "$JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf"
-    
+    mkdir -p "$JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf.d"
     # grab some configs
     fetch https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt -o "$JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf.d/00-blockListFakeUrl.conf"
     fetch https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt -o "$JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf.d/01-blockListPopUpUrl.conf"
