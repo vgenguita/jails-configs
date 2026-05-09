@@ -1,12 +1,9 @@
-#!/bin/sh
-
-# DNSMasq Jail Setup Script for FreeBSD/TrueNAS
-# Modified to include multiple Hagezi blocklists
+#!/bin/bash
 
 # Configuration
 jailName="dnsmasq"
-dnsmasqConfDir="/usr/local/etc/dnsmasq.d"
-blockListFile="$dnsmasqConfDir/blocklist.conf"
+jailMountPoint="/mnt/$(iocage get -p)/iocage/jails/${jailName}/root"
+dnsmasqConfDir="usr/local/etc/dnsmasq.d"
 
 # Blocklist URLs
 blockListFakeUrl='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt'
@@ -21,41 +18,48 @@ blockListTrackingOppoRealme='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@l
 blockListTrackingXiaomi='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.xiaomi.txt'
 blockListTrackingAmazon='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt'
 
-echo "Installing dnsmasq..."
-pkg install -y dnsmasq
+# Create the jail if it doesn't exist
+if ! iocage list | grep -q "${jailName}"; then
+    echo "Creating jail ${jailName}..."
+    iocage create -n "${jailName}" -r 13.2-RELEASE dhcp=on bpf=yes vnet=on
+fi
 
-echo "Creating configuration directory..."
-mkdir -p $dnsmasqConfDir
+# Start the jail
+iocage start "${jailName}"
 
-echo "Downloading and updating blocklists..."
-# Create/Empty the blocklist file
-: > "$blockListFile"
+# Install dnsmasq inside the jail
+iocage exec "${jailName}" pkg install -y dnsmasq
 
-# Download each list and append to the main blocklist file
-for url in "$blockListFakeUrl" "$blockListPopUpUrl" "$blockListAntiPiracy" "$blockListGambling" \
-           "$blockListTrackingApple" "$blockListTrackingMicrosoft" "$blockListTrackingTikTok" \
-           "$blockListTrackingLgWebOS" "$blockListTrackingOppoRealme" "$blockListTrackingXiaomi" \
-           "$blockListTrackingAmazon"; do
-    echo "Fetching $url..."
-    fetch -o - "$url" >> "$blockListFile"
-done
+# Create dnsmasq.d directory
+iocage exec "${jailName}" mkdir -p "/${dnsmasqConfDir}"
 
-# Basic dnsmasq configuration
-cat <<EOF > /usr/local/etc/dnsmasq.conf
-# Main configuration
-conf-dir=$dnsmasqConfDir/,.conf
+# Download blocklists to individual files
+echo "Downloading blocklists..."
+curl -L "${blockListFakeUrl}" -o "${jailMountPoint}/${dnsmasqConfDir}/00-blockListFakeUrl.conf"
+curl -L "${blockListPopUpUrl}" -o "${jailMountPoint}/${dnsmasqConfDir}/01-blockListPopUpUrl.conf"
+curl -L "${blockListAntiPiracy}" -o "${jailMountPoint}/${dnsmasqConfDir}/03-blockListAntiPiracy.conf"
+curl -L "${blockListGambling}" -o "${jailMountPoint}/${dnsmasqConfDir}/04-blockListGambling.conf"
+curl -L "${blockListTrackingApple}" -o "${jailMountPoint}/${dnsmasqConfDir}/05-blockListTrackingApple.conf"
+curl -L "${blockListTrackingMicrosoft}" -o "${jailMountPoint}/${dnsmasqConfDir}/06-blockListTrackingMicrosoft.conf"
+curl -L "${blockListTrackingTikTok}" -o "${jailMountPoint}/${dnsmasqConfDir}/07-blockListTrackingTikTok.conf"
+curl -L "${blockListTrackingLgWebOS}" -o "${jailMountPoint}/${dnsmasqConfDir}/08-blockListTrackingLgWebOS.conf"
+curl -L "${blockListTrackingOppoRealme}" -o "${jailMountPoint}/${dnsmasqConfDir}/09-blockListTrackingOppoRealme.conf"
+curl -L "${blockListTrackingXiaomi}" -o "${jailMountPoint}/${dnsmasqConfDir}/10-blockListTrackingXiaomi.conf"
+curl -L "${blockListTrackingAmazon}" -o "${jailMountPoint}/${dnsmasqConfDir}/11-blockListTrackingAmazon.conf"
+
+# Configure dnsmasq to use the .d directory
+iocage exec "${jailName}" bash -c "cat <<EOF > /usr/local/etc/dnsmasq.conf
+conf-dir=/${dnsmasqConfDir}/,.conf
 port=53
 domain-needed
 bogus-priv
 no-resolv
 server=1.1.1.1
 server=1.0.0.1
-interface=epair0b
-bind-interfaces
-EOF
+EOF"
 
-echo "Enabling and starting dnsmasq..."
-sysrc dnsmasq_enable="YES"
-service dnsmasq restart
+# Enable and start dnsmasq
+iocage exec "${jailName}" sysrc dnsmasq_enable="YES"
+iocage exec "${jailName}" service dnsmasq restart
 
-echo "Setup complete. DNSMasq is running with the updated blocklists."
+echo "dnsmasq jail is set up and blocklists are updated."
