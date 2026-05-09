@@ -14,7 +14,7 @@ else
     CONFIGS="config"
     
     service jail restart "$JAIL"
-    pkg -j "$JAIL" install dnsmasq
+    pkg -j "$JAIL" install dnsmasq wget
     
     # Enable service in rc.conf
     echo 'dnsmasq_enable="YES"' >> "$JAILMOUNTPOINT/$JAIL/etc/rc.conf"
