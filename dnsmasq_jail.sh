@@ -10,7 +10,7 @@ else
     ##PRE
     ##pkg install diffutils wget
     JAIL="$1"
-    JAILMOUNTPOINT="/usr/local/jails/containers/$1"
+    JAILMOUNTPOINT="/usr/local/jails/containers/"
     CONFIGS="config"
     
     service jail restart "$JAIL"
