@@ -1,65 +1,51 @@
-#!/bin/bash
+#!/bin/csh
+if ($#argv != 1) then
+	echo "Use: $0 jailName"
+	exit 0
+else
+    ##PRE
+    ##pkg install diffutils wget
+    set JAIL = "$1"
+    set JAILMOUNTPOINT = "/mnt/jails"
+    set CONFIGS = "config"
+    service jail restart $JAIL
+    pkg -j $JAIL install dnsmasq
+    echo dnsmasq_enable="YES" >> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
+    # create required directories
+    # mkdir /usr/local/etc/{dnsmasq.conf,hosts}.d
+    # create a new file for hosts & addresses
+    #cp $CONFIGS/10-custom.conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf.d/
+    ##Check with diff before copy
+    ##diff $CONFIGS/dnsmasq_rcd $JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq
+    ##diff $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
+    cp $CONFIGS/dnsmasq_rcd $JAILMOUNTPOINT/$JAIL/usr/local/etc/rc.d/dnsmasq
+    cp $CONFIGS/dnsmasq_conf $JAILMOUNTPOINT/$JAIL/usr/local/etc/dnsmasq.conf
+    
+    # grab some configs
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/00-blockListFakeUrl.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/01-blockListPopUpUrl.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/anti.piracy.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/03-blockListAntiPiracy.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/gambling.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/04-blockListGambling.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/05-blockListTrackingApple.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.winoffice.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/06-blockListTrackingMicrosoft.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.tiktok.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/07-blockListTrackingTikTok.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.lgwebos.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/08-blockListTrackingLgWebOS.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.oppo-realme.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/09-blockListTrackingOppoRealme.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.xiaomi.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/10-blockListTrackingXiaomi.conf
+    wget --no-check-certificate https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/dnsmasq.conf.d/11-blockListTrackingAmazon.conf
 
-# Configuration
-jailName="dnsmasq"
-jailMountPoint="/mnt/$(iocage get -p)/iocage/jails/${jailName}/root"
-dnsmasqConfDir="usr/local/etc/dnsmasq.d"
-
-# Blocklist URLs
-blockListFakeUrl='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/fake.txt'
-blockListPopUpUrl='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/popupads.txt'
-blockListAntiPiracy='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/anti.piracy.txt'
-blockListGambling='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/gambling.txt'
-blockListTrackingApple='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt'
-blockListTrackingMicrosoft='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.winoffice.txt'
-blockListTrackingTikTok='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.tiktok.txt'
-blockListTrackingLgWebOS='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.lgwebos.txt'
-blockListTrackingOppoRealme='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.oppo-realme.txt'
-blockListTrackingXiaomi='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.xiaomi.txt'
-blockListTrackingAmazon='https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/dnsmasq/native.amazon.txt'
-
-# Create the jail if it doesn't exist
-if ! iocage list | grep -q "${jailName}"; then
-    echo "Creating jail ${jailName}..."
-    iocage create -n "${jailName}" -r 13.2-RELEASE dhcp=on bpf=yes vnet=on
-fi
-
-# Start the jail
-iocage start "${jailName}"
-
-# Install dnsmasq inside the jail
-iocage exec "${jailName}" pkg install -y dnsmasq
-
-# Create dnsmasq.d directory
-iocage exec "${jailName}" mkdir -p "/${dnsmasqConfDir}"
-
-# Download blocklists to individual files
-echo "Downloading blocklists..."
-curl -L "${blockListFakeUrl}" -o "${jailMountPoint}/${dnsmasqConfDir}/00-blockListFakeUrl.conf"
-curl -L "${blockListPopUpUrl}" -o "${jailMountPoint}/${dnsmasqConfDir}/01-blockListPopUpUrl.conf"
-curl -L "${blockListAntiPiracy}" -o "${jailMountPoint}/${dnsmasqConfDir}/03-blockListAntiPiracy.conf"
-curl -L "${blockListGambling}" -o "${jailMountPoint}/${dnsmasqConfDir}/04-blockListGambling.conf"
-curl -L "${blockListTrackingApple}" -o "${jailMountPoint}/${dnsmasqConfDir}/05-blockListTrackingApple.conf"
-curl -L "${blockListTrackingMicrosoft}" -o "${jailMountPoint}/${dnsmasqConfDir}/06-blockListTrackingMicrosoft.conf"
-curl -L "${blockListTrackingTikTok}" -o "${jailMountPoint}/${dnsmasqConfDir}/07-blockListTrackingTikTok.conf"
-curl -L "${blockListTrackingLgWebOS}" -o "${jailMountPoint}/${dnsmasqConfDir}/08-blockListTrackingLgWebOS.conf"
-curl -L "${blockListTrackingOppoRealme}" -o "${jailMountPoint}/${dnsmasqConfDir}/09-blockListTrackingOppoRealme.conf"
-curl -L "${blockListTrackingXiaomi}" -o "${jailMountPoint}/${dnsmasqConfDir}/10-blockListTrackingXiaomi.conf"
-curl -L "${blockListTrackingAmazon}" -o "${jailMountPoint}/${dnsmasqConfDir}/11-blockListTrackingAmazon.conf"
-
-# Configure dnsmasq to use the .d directory
-iocage exec "${jailName}" bash -c "cat <<EOF > /usr/local/etc/dnsmasq.conf
-conf-dir=/${dnsmasqConfDir}/,.conf
-port=53
-domain-needed
-bogus-priv
-no-resolv
-server=1.1.1.1
-server=1.0.0.1
-EOF"
-
-# Enable and start dnsmasq
-iocage exec "${jailName}" sysrc dnsmasq_enable="YES"
-iocage exec "${jailName}" service dnsmasq restart
-
-echo "dnsmasq jail is set up and blocklists are updated."
+    # grab some hosts
+    #wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardDNS.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/hosts.d/adguard
+    #wget --no-check-certificate https://raw.githubusercontent.com/r-a-y/mobile-hosts/master/AdguardMobileAds.txt -O $JAILMOUNTPOINT/$JAIL//usr/local/etc/hosts.d/adguard-mobile
+    ##POST
+    ##Pass port from jail to host with pf or prefered firewall
+    ##Test config
+    ##  dnsmasq --test #ON JAIL
+    ##Check config
+    ##  dnsmasq -d -q #ON JAIL
+    ##  drill freebsd.org @ipjail #ON HOST
+    ##Start service
+    ##  service dnsmasq start
+    echo "dnsmasq_enable=\"YES\"" >> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
+    echo "dnsmasq_conf=\"/usr/local/etc/dnsmasq.conf\"">> $JAILMOUNTPOINT/$JAIL/etc/rc.conf
+endif
